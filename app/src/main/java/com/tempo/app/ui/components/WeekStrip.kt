@@ -33,7 +33,7 @@ private val DAY_LETTERS = listOf("M", "T", "W", "T", "F", "S", "S")
 fun WeekStrip(
     selectedDate: LocalDate,
     today: LocalDate,
-    eventDays: Set<Int>,
+    eventDays: Set<LocalDate>,
     onDaySelected: (LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -52,7 +52,7 @@ fun WeekStrip(
         weekDates.forEachIndexed { index, date ->
             val isSelected = date == selectedDate
             val isToday = date == today
-            val hasEvents = eventDays.contains(date.dayOfMonth)
+            val hasEvents = eventDays.contains(date)
 
             val bgColor by animateColorAsState(
                 targetValue = if (isSelected) palette.accent else Color.Transparent,

@@ -9,6 +9,7 @@ import com.tempo.app.data.local.db.CalendarDao
 import com.tempo.app.data.local.db.entity.CalendarEntity
 import com.tempo.app.domain.model.Calendar
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.UUID
 
@@ -16,6 +17,9 @@ class CalendarRepository(private val calendarDao: CalendarDao) {
 
     fun getAllCalendars(): Flow<List<Calendar>> =
         calendarDao.getAllCalendars().map { entities -> entities.map { it.toDomain() } }
+
+    suspend fun getAllCalendarsList(): List<Calendar> =
+        calendarDao.getAllCalendars().first().map { it.toDomain() }
 
     fun getEnabledCalendars(): Flow<List<Calendar>> =
         calendarDao.getEnabledCalendars().map { entities -> entities.map { it.toDomain() } }

@@ -13,20 +13,26 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tempo.app.ui.components.GlassCard
+import com.tempo.app.ui.components.TempoBottomSheet
 import com.tempo.app.ui.theme.TempoDesign
 
 data class CalendarInfo(
+    val id: String,
     val name: String,
     val color: Color,
     val eventCount: Int,
@@ -44,11 +50,15 @@ fun SettingsScreen(
     allDayTime: String,
     notificationsEnabled: Boolean,
     onCalendarToggle: (Int, Boolean) -> Unit,
+    onSaveCalDav: (serverUrl: String, username: String, password: String) -> Unit,
+    onSync: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val palette = TempoDesign.palette
     val typography = TempoDesign.typography
     val scrollState = rememberScrollState()
+
+    var showCalDavSetup by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -107,6 +117,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
+                .clickable { showCalDavSetup = true }
         ) {
             Column {
                 Row(
@@ -131,7 +142,7 @@ fun SettingsScreen(
                             style = typography.bodySemiBold.copy(color = palette.text)
                         )
                         BasicText(
-                            text = serverUrl.ifBlank { "Tap to set up" },
+                            text = serverUrl.ifBlank { "Tap to set up CalDAV" },
                             style = typography.locationChip.copy(color = palette.textSec),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -186,6 +197,31 @@ fun SettingsScreen(
                         )
                     )
                 }
+
+                if (serverUrl.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(palette.border)
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSync() }
+                            .padding(horizontal = 18.dp, vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        BasicText(
+                            text = "Sync Now",
+                            style = typography.bodyMedium.copy(
+                                color = palette.accent,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        )
+                    }
+                }
             }
         }
 
@@ -203,7 +239,8 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 14.dp),
+                            .padding(horizontal = 18.dp, vertical = 14.dp)
+                            .semantics { contentDescription = "${cal.name} calendar, ${cal.eventCount} events" },
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
@@ -283,7 +320,7 @@ fun SettingsScreen(
                     style = typography.body.copy(color = palette.text)
                 )
                 BasicText(
-                    text = "Default app ✓",
+                    text = "Default app",
                     style = typography.eventTime.copy(
                         color = palette.secondary,
                         fontWeight = FontWeight.Medium
@@ -293,6 +330,111 @@ fun SettingsScreen(
         }
 
         Spacer(Modifier.height(24.dp))
+    }
+
+    // CalDAV Setup Sheet
+    CalDavSetupSheet(
+        visible = showCalDavSetup,
+        currentUrl = serverUrl,
+        onDismiss = { showCalDavSetup = false },
+        onSave = { url, user, pass ->
+            onSaveCalDav(url, user, pass)
+            showCalDavSetup = false
+        }
+    )
+}
+
+@Composable
+private fun CalDavSetupSheet(
+    visible: Boolean,
+    currentUrl: String,
+    onDismiss: () -> Unit,
+    onSave: (serverUrl: String, username: String, password: String) -> Unit
+) {
+    val palette = TempoDesign.palette
+    val typography = TempoDesign.typography
+
+    var serverUrl by remember { mutableStateOf(currentUrl) }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
+    LaunchedEffect(visible) {
+        if (visible) {
+            serverUrl = currentUrl
+        }
+    }
+
+    TempoBottomSheet(visible = visible, onDismiss = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+                .padding(bottom = 40.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            BasicText(
+                text = "CalDAV Setup",
+                style = typography.sheetTitle.copy(color = palette.text)
+            )
+
+            SetupField(value = serverUrl, onValueChange = { serverUrl = it }, placeholder = "Server URL (e.g. https://...)")
+            SetupField(value = username, onValueChange = { username = it }, placeholder = "Username")
+            SetupField(value = password, onValueChange = { password = it }, placeholder = "Password")
+
+            Spacer(Modifier.height(6.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(palette.accent)
+                    .clickable {
+                        if (serverUrl.isNotBlank() && username.isNotBlank()) {
+                            onSave(serverUrl.trim(), username.trim(), password)
+                        }
+                    }
+                    .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                BasicText(
+                    text = "Save & Connect",
+                    style = typography.button.copy(color = palette.accentContrast)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SetupField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String
+) {
+    val palette = TempoDesign.palette
+    val typography = TempoDesign.typography
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(palette.glass)
+            .border(1.5.dp, palette.border, RoundedCornerShape(14.dp))
+            .padding(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+        if (value.isEmpty()) {
+            BasicText(
+                text = placeholder,
+                style = typography.body.copy(color = palette.textMuted)
+            )
+        }
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            textStyle = typography.body.copy(color = palette.text),
+            cursorBrush = SolidColor(palette.accent),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -363,6 +505,7 @@ private fun ToggleSwitch(
             .clip(RoundedCornerShape(13.dp))
             .background(if (checked) palette.accent else palette.textMuted.copy(alpha = 0.3f))
             .clickable { onCheckedChange(!checked) }
+            .semantics { contentDescription = if (checked) "Enabled" else "Disabled" }
     ) {
         Box(
             modifier = Modifier

@@ -31,7 +31,7 @@ class CalDavDiscovery(private val client: CalDavClient, private val baseUrl: Str
         }
     }
 
-    private fun findPrincipal(): String? {
+    private suspend fun findPrincipal(): String? {
         val wellKnownUrl = resolveUrl(baseUrl, "/.well-known/caldav")
         val response = client.get(wellKnownUrl)
 
@@ -58,7 +58,7 @@ class CalDavDiscovery(private val client: CalDavClient, private val baseUrl: Str
         }
     }
 
-    private fun findCalendarHomeSet(principalUrl: String): String? {
+    private suspend fun findCalendarHomeSet(principalUrl: String): String? {
         val propfindBody = """
             <?xml version="1.0" encoding="utf-8"?>
             <d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
@@ -76,7 +76,7 @@ class CalDavDiscovery(private val client: CalDavClient, private val baseUrl: Str
         }
     }
 
-    private fun listCalendars(homeSetUrl: String): List<Calendar> {
+    private suspend fun listCalendars(homeSetUrl: String): List<Calendar> {
         val propfindBody = """
             <?xml version="1.0" encoding="utf-8"?>
             <d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/" xmlns:ic="http://apple.com/ns/ical/">

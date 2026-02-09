@@ -69,6 +69,7 @@ class MainActivity : ComponentActivity() {
                         EventColor.TERTIARY -> palette.tertiary
                     }
                     CalendarInfo(
+                        id = cal.id,
                         name = cal.name,
                         color = color,
                         eventCount = eventCount,
@@ -96,11 +97,15 @@ class MainActivity : ComponentActivity() {
                     onDateSelected = { viewModel.selectDate(it) },
                     onMonthChange = { viewModel.changeMonth(it) },
                     onEventTap = { /* handled in nav */ },
-                    onCreateEvent = { title, location, calIndex, remIndex ->
-                        viewModel.createEvent(title, location, calIndex, remIndex)
+                    onCreateEvent = { title, location, calIndex, remIndex, startH, startM, endH, endM ->
+                        viewModel.createEvent(title, location, calIndex, remIndex, startH, startM, endH, endM)
                     },
                     onCalendarToggle = { index, enabled ->
                         viewModel.toggleCalendar(index, enabled)
+                    },
+                    onSync = { viewModel.triggerSync() },
+                    onSaveCalDav = { url, user, pass ->
+                        viewModel.saveCalDavCredentials(url, user, pass)
                     },
                     modifier = Modifier
                         .fillMaxSize()

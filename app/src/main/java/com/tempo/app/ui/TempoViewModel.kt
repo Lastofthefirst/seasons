@@ -21,6 +21,7 @@ import com.tempo.app.worker.NotificationScheduler
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.YearMonth
 import java.time.ZoneId
 import java.util.UUID
@@ -30,7 +31,7 @@ class TempoViewModel(application: Application) : AndroidViewModel(application) {
     private val database = TempoDatabase.getInstance(application)
     private val eventRepository = EventRepository(database.eventDao())
     private val calendarRepository = CalendarRepository(database.calendarDao())
-    private val preferences = TempoPreferences(application)
+    val preferences = TempoPreferences(application)
     private val notificationScheduler = NotificationScheduler(application)
 
     private val _selectedDate = MutableStateFlow(LocalDate.now())
@@ -39,11 +40,17 @@ class TempoViewModel(application: Application) : AndroidViewModel(application) {
     private val _yearMonth = MutableStateFlow(YearMonth.now())
     val yearMonth: StateFlow<YearMonth> = _yearMonth.asStateFlow()
 
-    val events: StateFlow<List<CalendarEvent>> = eventRepository.getAllEvents()
+    val allEvents: StateFlow<List<CalendarEvent>> = eventRepository.getAllEvents()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val calendars: StateFlow<List<Calendar>> = calendarRepository.getAllCalendars()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Filter events by enabled calendars (#20)
+    val events: StateFlow<List<CalendarEvent>> = combine(allEvents, calendars) { events, cals ->
+        val enabledIds = cals.filter { it.enabled }.map { it.id }.toSet()
+        events.filter { it.calendarId in enabledIds }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val lastSyncTime: StateFlow<Long> = preferences.lastSyncTime
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
@@ -107,17 +114,17 @@ class TempoViewModel(application: Application) : AndroidViewModel(application) {
         title: String,
         location: String,
         calendarIndex: Int,
-        reminderIndex: Int
+        reminderIndex: Int,
+        startHour: Int,
+        startMinute: Int,
+        endHour: Int,
+        endMinute: Int
     ) {
         viewModelScope.launch {
             val cals = calendars.value
-            val calendarId = cals.getOrNull(calendarIndex)?.id ?: cals.firstOrNull()?.id ?: return@launch
-            val color = when (calendarIndex) {
-                0 -> EventColor.ACCENT
-                1 -> EventColor.SECONDARY
-                2 -> EventColor.TERTIARY
-                else -> EventColor.ACCENT
-            }
+            val cal = cals.getOrNull(calendarIndex) ?: cals.firstOrNull() ?: return@launch
+            val calendarId = cal.id
+            val color = cal.color
             val reminderMinutes = when (reminderIndex) {
                 0 -> null
                 1 -> 5
@@ -127,8 +134,8 @@ class TempoViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             val date = _selectedDate.value
-            val startTime = date.atTime(9, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            val endTime = date.atTime(10, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val startTime = date.atTime(startHour, startMinute).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val endTime = date.atTime(endHour, endMinute).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
             val event = CalendarEvent(
                 id = UUID.randomUUID().toString(),
@@ -163,6 +170,12 @@ class TempoViewModel(application: Application) : AndroidViewModel(application) {
 
     fun triggerSync() {
         CalDavSyncWorker.enqueueOneTimeSync(getApplication())
+    }
+
+    fun saveCalDavCredentials(serverUrl: String, username: String, password: String) {
+        viewModelScope.launch {
+            preferences.setCalDavCredentials(serverUrl, username, password)
+        }
     }
 
     fun getLastSyncText(lastSync: Long): String {

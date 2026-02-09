@@ -7,6 +7,7 @@ package com.tempo.app.ui.screens
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -36,16 +37,17 @@ fun TodayScreen(
     events: List<CalendarEvent>,
     lastSyncText: String,
     onEventTap: (CalendarEvent) -> Unit,
+    onSync: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val palette = TempoDesign.palette
     val typography = TempoDesign.typography
 
-    val greeting = remember {
-        val hour = LocalTime.now().hour
+    val currentHour = LocalTime.now().hour
+    val greeting = remember(currentHour) {
         when {
-            hour < 12 -> "Good morning"
-            hour < 17 -> "Good afternoon"
+            currentHour < 12 -> "Good morning"
+            currentHour < 17 -> "Good afternoon"
             else -> "Good evening"
         }
     }
@@ -137,6 +139,12 @@ fun TodayScreen(
                 BasicText(
                     text = lastSyncText,
                     style = typography.label.copy(color = palette.textMuted)
+                )
+                Spacer(Modifier.width(12.dp))
+                BasicText(
+                    text = "Sync",
+                    style = typography.label.copy(color = palette.accent),
+                    modifier = Modifier.clickable { onSync() }
                 )
             }
         }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +41,14 @@ fun MonthGrid(
     val daysInMonth = yearMonth.lengthOfMonth()
     val firstDayOfWeek = yearMonth.atDay(1).dayOfWeek.value // 1=Monday
 
+    val weeks = remember(yearMonth) {
+        val cells = mutableListOf<Int?>()
+        for (i in 1 until firstDayOfWeek) cells.add(null)
+        for (d in 1..daysInMonth) cells.add(d)
+        while (cells.size % 7 != 0) cells.add(null)
+        cells.chunked(7)
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -63,14 +72,6 @@ fun MonthGrid(
                 }
             }
         }
-
-        // Calendar grid
-        val cells = mutableListOf<Int?>()
-        for (i in 1 until firstDayOfWeek) cells.add(null)
-        for (d in 1..daysInMonth) cells.add(d)
-        while (cells.size % 7 != 0) cells.add(null)
-
-        val weeks = cells.chunked(7)
         for (week in weeks) {
             Row(
                 modifier = Modifier

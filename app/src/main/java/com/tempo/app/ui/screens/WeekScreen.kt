@@ -34,7 +34,7 @@ fun WeekScreen(
     selectedDate: LocalDate,
     today: LocalDate,
     events: List<CalendarEvent>,
-    eventDays: Set<Int>,
+    eventDays: Set<LocalDate>,
     onDaySelected: (LocalDate) -> Unit,
     onEventTap: (CalendarEvent) -> Unit,
     modifier: Modifier = Modifier

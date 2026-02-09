@@ -17,7 +17,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import com.tempo.app.domain.model.CalendarEvent
-import com.tempo.app.domain.model.EventColor
 import com.tempo.app.ui.components.BottomNavBar
 import com.tempo.app.ui.components.NavTab
 import com.tempo.app.ui.components.TempoFAB
@@ -43,8 +42,10 @@ fun TempoNavHost(
     onDateSelected: (LocalDate) -> Unit,
     onMonthChange: (Int) -> Unit,
     onEventTap: (CalendarEvent) -> Unit,
-    onCreateEvent: (title: String, location: String, calendarIndex: Int, reminderIndex: Int) -> Unit,
+    onCreateEvent: (title: String, location: String, calendarIndex: Int, reminderIndex: Int, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) -> Unit,
     onCalendarToggle: (Int, Boolean) -> Unit,
+    onSync: () -> Unit,
+    onSaveCalDav: (serverUrl: String, username: String, password: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val palette = TempoDesign.palette
@@ -52,6 +53,31 @@ fun TempoNavHost(
     var activeTab by remember { mutableStateOf(NavTab.TODAY) }
     var showNewEvent by remember { mutableStateOf(false) }
     var selectedEvent by remember { mutableStateOf<CalendarEvent?>(null) }
+
+    // (#12) Pre-compute filtered collections outside the Crossfade so that
+    // O(n) work only re-runs when `events` or the relevant key changes,
+    // not on every recomposition of the Crossfade content lambda.
+    val today = LocalDate.now()
+
+    val dayEvents = remember(events, selectedDate) {
+        events.filter { it.startDateTime.toLocalDate() == selectedDate }
+    }
+
+    // (#4) Use Set<LocalDate> instead of Set<Int> to avoid month-boundary ambiguity.
+    val eventDays: Set<LocalDate> = remember(events, selectedDate) {
+        events.filter {
+            val eventDate = it.startDateTime.toLocalDate()
+            eventDate.month == selectedDate.month && eventDate.year == selectedDate.year
+        }.map { it.startDateTime.toLocalDate() }.toSet()
+    }
+
+    val monthEventDots = remember(events, yearMonth) {
+        events.filter {
+            val eventDate = it.startDateTime.toLocalDate()
+            eventDate.month == yearMonth.month && eventDate.year == yearMonth.year
+        }.groupBy { it.startDateTime.toLocalDate().dayOfMonth }
+            .mapValues { (_, evts) -> evts.map { it.color } }
+    }
 
     Box(
         modifier = modifier
@@ -86,22 +112,6 @@ fun TempoNavHost(
             animationSpec = tween(250),
             label = "screenTransition"
         ) { tab ->
-            val today = LocalDate.now()
-            val dayEvents = events.filter {
-                val eventDate = it.startDateTime.toLocalDate()
-                eventDate == selectedDate
-            }
-            val eventDays = events.filter {
-                val eventDate = it.startDateTime.toLocalDate()
-                eventDate.month == selectedDate.month && eventDate.year == selectedDate.year
-            }.map { it.startDateTime.toLocalDate().dayOfMonth }.toSet()
-
-            val monthEventDots = events.filter {
-                val eventDate = it.startDateTime.toLocalDate()
-                eventDate.month == yearMonth.month && eventDate.year == yearMonth.year
-            }.groupBy { it.startDateTime.toLocalDate().dayOfMonth }
-                .mapValues { (_, evts) -> evts.map { it.color } }
-
             when (tab) {
                 NavTab.TODAY -> TodayScreen(
                     date = selectedDate,
@@ -110,7 +120,8 @@ fun TempoNavHost(
                     onEventTap = { event ->
                         selectedEvent = event
                         onEventTap(event)
-                    }
+                    },
+                    onSync = onSync
                 )
                 NavTab.WEEK -> WeekScreen(
                     selectedDate = selectedDate,
@@ -142,7 +153,9 @@ fun TempoNavHost(
                     defaultReminder = defaultReminder,
                     allDayTime = allDayTime,
                     notificationsEnabled = notificationsEnabled,
-                    onCalendarToggle = onCalendarToggle
+                    onCalendarToggle = onCalendarToggle,
+                    onSaveCalDav = onSaveCalDav,
+                    onSync = onSync
                 )
             }
         }
@@ -169,24 +182,20 @@ fun TempoNavHost(
             visible = showNewEvent,
             date = selectedDate,
             onDismiss = { showNewEvent = false },
-            onCreateEvent = { title, location, calIndex, remIndex ->
-                onCreateEvent(title, location, calIndex, remIndex)
+            onCreateEvent = { title, location, calIndex, remIndex, startH, startM, endH, endM ->
+                onCreateEvent(title, location, calIndex, remIndex, startH, startM, endH, endM)
                 showNewEvent = false
             }
         )
 
         // Event Detail Sheet
+        // (#15) Look up calendar name by matching event.calendarId to the
+        // calendars list instead of using the fragile EventColor ordinal index.
         EventDetailSheet(
             visible = selectedEvent != null,
             event = selectedEvent,
             calendarName = selectedEvent?.let { evt ->
-                calendars.getOrNull(
-                    when (evt.color) {
-                        EventColor.ACCENT -> 0
-                        EventColor.SECONDARY -> 1
-                        EventColor.TERTIARY -> 2
-                    }
-                )?.name ?: "Personal"
+                calendars.find { it.id == evt.calendarId }?.name ?: "Personal"
             } ?: "Personal",
             onDismiss = { selectedEvent = null },
             onEdit = { selectedEvent = null },

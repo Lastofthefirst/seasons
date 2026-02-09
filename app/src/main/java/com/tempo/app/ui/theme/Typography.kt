@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.tempo.app.R
 
@@ -143,7 +144,5 @@ data class TempoTypography(
         letterSpacing = (-0.02).em
     )
 )
-
-private val TextUnit_em = 1.sp // helper
 
 val LocalTempoTypography = staticCompositionLocalOf { TempoTypography() }

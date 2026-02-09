@@ -49,7 +49,9 @@ fun EventCard(
             .clickable(onClick = onClick)
     ) {
         Row(
-            modifier = Modifier.padding(18.dp, 18.dp, 20.dp, 18.dp),
+            modifier = Modifier
+                .height(IntrinsicSize.Min)
+                .padding(18.dp, 18.dp, 20.dp, 18.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.Top
         ) {

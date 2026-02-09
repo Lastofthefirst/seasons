@@ -39,7 +39,7 @@ fun NewEventSheet(
     visible: Boolean,
     date: LocalDate,
     onDismiss: () -> Unit,
-    onCreateEvent: (title: String, location: String, calendarIndex: Int, reminderIndex: Int) -> Unit
+    onCreateEvent: (title: String, location: String, calendarIndex: Int, reminderIndex: Int, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) -> Unit
 ) {
     val palette = TempoDesign.palette
     val typography = TempoDesign.typography
@@ -48,6 +48,24 @@ fun NewEventSheet(
     var location by remember { mutableStateOf("") }
     var selectedCalendar by remember { mutableIntStateOf(0) }
     var selectedReminder by remember { mutableIntStateOf(2) } // Default 15 min
+    var startHour by remember { mutableIntStateOf(9) }
+    var startMinute by remember { mutableIntStateOf(0) }
+    var endHour by remember { mutableIntStateOf(10) }
+    var endMinute by remember { mutableIntStateOf(0) }
+
+    // Reset form state when sheet visibility changes
+    LaunchedEffect(visible) {
+        if (!visible) {
+            title = ""
+            location = ""
+            selectedCalendar = 0
+            selectedReminder = 2
+            startHour = 9
+            startMinute = 0
+            endHour = 10
+            endMinute = 0
+        }
+    }
 
     val calendarNames = listOf("Personal", "Work", "Family")
     val calendarColors = listOf(palette.accent, palette.secondary, palette.tertiary)
@@ -113,12 +131,27 @@ fun NewEventSheet(
                             .clip(RoundedCornerShape(14.dp))
                             .background(palette.glass)
                             .border(1.5.dp, palette.border, RoundedCornerShape(14.dp))
-                            .padding(14.dp)
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
                     ) {
-                        BasicText(
-                            text = "${date.format(dateFormatter)}, ${LocalTime.of(9, 0).format(timeFormatter)}",
-                            style = typography.body.copy(color = palette.text)
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            BasicText(
+                                text = date.format(dateFormatter),
+                                style = typography.eventTime.copy(
+                                    color = palette.textSec,
+                                    fontWeight = FontWeight.Normal
+                                )
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            TimeAdjuster(
+                                hour = startHour,
+                                minute = startMinute,
+                                onHourChange = { startHour = it },
+                                onMinuteChange = { startMinute = it }
+                            )
+                        }
                     }
                 }
                 Column(modifier = Modifier.weight(1f)) {
@@ -133,12 +166,27 @@ fun NewEventSheet(
                             .clip(RoundedCornerShape(14.dp))
                             .background(palette.glass)
                             .border(1.5.dp, palette.border, RoundedCornerShape(14.dp))
-                            .padding(14.dp)
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
                     ) {
-                        BasicText(
-                            text = "${date.format(dateFormatter)}, ${LocalTime.of(10, 0).format(timeFormatter)}",
-                            style = typography.body.copy(color = palette.text)
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            BasicText(
+                                text = date.format(dateFormatter),
+                                style = typography.eventTime.copy(
+                                    color = palette.textSec,
+                                    fontWeight = FontWeight.Normal
+                                )
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            TimeAdjuster(
+                                hour = endHour,
+                                minute = endMinute,
+                                onHourChange = { endHour = it },
+                                onMinuteChange = { endMinute = it }
+                            )
+                        }
                     }
                 }
             }
@@ -249,9 +297,16 @@ fun NewEventSheet(
                     .background(palette.accent)
                     .clickable {
                         if (title.isNotBlank()) {
-                            onCreateEvent(title, location, selectedCalendar, selectedReminder)
-                            title = ""
-                            location = ""
+                            onCreateEvent(
+                                title,
+                                location,
+                                selectedCalendar,
+                                selectedReminder,
+                                startHour,
+                                startMinute,
+                                endHour,
+                                endMinute
+                            )
                         }
                     }
                     .padding(vertical = 18.dp),
@@ -262,6 +317,91 @@ fun NewEventSheet(
                     style = typography.button.copy(color = palette.accentContrast)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun TimeAdjuster(
+    hour: Int,
+    minute: Int,
+    onHourChange: (Int) -> Unit,
+    onMinuteChange: (Int) -> Unit
+) {
+    val palette = TempoDesign.palette
+    val typography = TempoDesign.typography
+    val displayTime = LocalTime.of(hour, minute).format(timeFormatter)
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        // Decrement button
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(palette.surface)
+                .border(1.dp, palette.border, RoundedCornerShape(8.dp))
+                .clickable {
+                    val totalMinutes = hour * 60 + minute - 15
+                    if (totalMinutes >= 0) {
+                        onHourChange(totalMinutes / 60)
+                        onMinuteChange(totalMinutes % 60)
+                    } else {
+                        onHourChange(23)
+                        onMinuteChange(45)
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            BasicText(
+                text = "-",
+                style = typography.body.copy(
+                    color = palette.textSec,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            )
+        }
+
+        // Time display
+        BasicText(
+            text = displayTime,
+            style = typography.body.copy(
+                color = palette.text,
+                fontWeight = FontWeight.Medium
+            ),
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+
+        // Increment button
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(palette.surface)
+                .border(1.dp, palette.border, RoundedCornerShape(8.dp))
+                .clickable {
+                    val totalMinutes = hour * 60 + minute + 15
+                    if (totalMinutes < 24 * 60) {
+                        onHourChange(totalMinutes / 60)
+                        onMinuteChange(totalMinutes % 60)
+                    } else {
+                        onHourChange(0)
+                        onMinuteChange(0)
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            BasicText(
+                text = "+",
+                style = typography.body.copy(
+                    color = palette.textSec,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            )
         }
     }
 }

@@ -7,7 +7,6 @@ package com.tempo.app.data.remote.caldav
 
 import com.tempo.app.data.repository.CalendarRepository
 import com.tempo.app.data.repository.EventRepository
-import com.tempo.app.domain.model.CalendarEvent
 import com.tempo.app.domain.model.SyncStatus
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -42,11 +41,15 @@ class CalDavSync(
             errors.add("Push failed: ${e.message}")
         }
 
-        // Pull remote changes
+        // Pull remote changes for each calendar
         try {
-            val pullResult = pullRemoteChanges()
-            totalPulled = pullResult.pulled
-            errors.addAll(pullResult.errors)
+            val calendars = calendarRepository.getAllCalendarsList()
+            for (cal in calendars) {
+                val calDavUrl = cal.calDavUrl ?: continue
+                val pullResult = pullCalendar(calDavUrl, cal.id)
+                totalPulled += pullResult.pulled
+                errors.addAll(pullResult.errors)
+            }
         } catch (e: Exception) {
             errors.add("Pull failed: ${e.message}")
         }
@@ -98,42 +101,6 @@ class CalDavSync(
         }
 
         return SyncResult(pushed = pushed, deleted = deleted, errors = errors)
-    }
-
-    private suspend fun pullRemoteChanges(): SyncResult {
-        var pulled = 0
-        val errors = mutableListOf<String>()
-
-        // For each calendar, pull events
-        // We use a 3-month window: 1 month back, 2 months forward
-        val now = LocalDate.now()
-        val startDate = now.minusMonths(1).withDayOfMonth(1)
-        val endDate = now.plusMonths(2).withDayOfMonth(1)
-
-        val formatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'")
-        val startStr = startDate.atStartOfDay().atOffset(ZoneOffset.UTC).format(formatter)
-        val endStr = endDate.atStartOfDay().atOffset(ZoneOffset.UTC).format(formatter)
-
-        val reportBody = """
-            <?xml version="1.0" encoding="utf-8"?>
-            <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
-              <d:prop>
-                <d:getetag />
-                <c:calendar-data />
-              </d:prop>
-              <c:filter>
-                <c:comp-filter name="VCALENDAR">
-                  <c:comp-filter name="VEVENT">
-                    <c:time-range start="$startStr" end="$endStr"/>
-                  </c:comp-filter>
-                </c:comp-filter>
-              </c:filter>
-            </c:calendar-query>
-        """.trimIndent()
-
-        // This is a simplified version - in production you'd iterate over discovered calendars
-        // For now, we parse any REPORT results we get
-        return SyncResult(pulled = pulled, errors = errors)
     }
 
     suspend fun pullCalendar(calendarUrl: String, calendarId: String): SyncResult {

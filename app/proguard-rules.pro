@@ -1,9 +1,5 @@
 # Tempo ProGuard Rules
 
-# Keep ical4j classes
--keep class net.fortuna.ical4j.** { *; }
--dontwarn net.fortuna.ical4j.**
-
 # Keep Room entities
 -keep class com.tempo.app.data.local.db.entity.** { *; }
 
