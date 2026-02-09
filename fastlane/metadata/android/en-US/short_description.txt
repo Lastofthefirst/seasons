@@ -1,0 +1,1 @@
+Seasonal calendar app with CalDAV sync and aurora glassmorphism design
