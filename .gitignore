@@ -1,0 +1,35 @@
+# Android/Gradle
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build/
+/captures
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.dex
+*.class
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+
+# App specific
+/app/build/
+/app/release/
+*.jks
+*.keystore
+/app/schemas/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

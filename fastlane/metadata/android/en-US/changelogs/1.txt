@@ -1,0 +1,8 @@
+Initial release of Tempo - Seasonal Calendar App
+
+- Aurora glassmorphism UI with seasonal color palettes
+- CalDAV sync support (Nextcloud, Radicale, Fastmail)
+- .ics file import
+- Offline notifications
+- Today, Week, Month views
+- Event management

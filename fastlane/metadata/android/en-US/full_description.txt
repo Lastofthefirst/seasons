@@ -1,0 +1,13 @@
+Tempo is a beautiful, open-source calendar app for Android that syncs with CalDAV servers.
+
+Features:
+- Aurora glassmorphism UI that shifts color palette with the seasons
+- Full CalDAV sync (Nextcloud, Radicale, Fastmail, and more)
+- .ics file import from email apps
+- Reliable offline notifications via AlarmManager
+- Today, Week, and Month views
+- Event creation with calendar and reminder selection
+- Background sync via WorkManager
+- No Google dependencies, no tracking, no ads
+
+Tempo is licensed under GPL v3 and is designed for F-Droid distribution. It uses no proprietary dependencies.

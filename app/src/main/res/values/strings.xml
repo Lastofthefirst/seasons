@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tempo</string>
+    <string name="notification_channel_name">Event Reminders</string>
+    <string name="notification_channel_description">Notifications for upcoming calendar events</string>
+</resources>
